@@ -1,3 +1,4 @@
+import sqlite3
 def get_total_requests():
     conn = sqlite3.connect("engine.db")
     cursor = conn.cursor()
