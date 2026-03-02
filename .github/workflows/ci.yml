@@ -2,33 +2,42 @@ name: Engine CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11"]
+
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8 bandit safety
 
-      - name: Verify application imports
+      - name: Lint (Strict Mode)
         run: |
-          python -c "import app.main"
+          flake8 app --max-line-length=100 --count --select=E9,F63,F7,F82 --show-source --statistics
 
-      - name: Lint
-        run: |
-          pip install flake8
-          flake8 app --max-line-length=100
+      - name: Security Scan (Bandit)
+        run: bandit -r app
+
+      - name: Dependency Vulnerability Scan (Safety)
+        run: safety check
+
+      - name: Run Tests with Coverage
+        run: pytest --cov=app --cov-report=term-missing --cov-fail-under=80
